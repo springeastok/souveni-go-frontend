@@ -1,4 +1,4 @@
-'use client';
+         'use client';
 import { useState } from 'react';
 
 // 親コンポーネント (app/page.jsx) から受け取る関数
@@ -26,7 +26,7 @@ export default function RegisterScreen({ onRegisterSuccess, onBack }) {
         body: JSON.stringify({
           email: email,
           password: password,
-          age: age,
+          age_group: age,
           gender: gender,
         }),
       });
