@@ -1,15 +1,14 @@
 'use client';
 import { useState } from 'react';
 
-// 親コンポーネント (app/page.jsx) から受け取る関数
 export default function LoginScreen({ onLoginSuccess, onBack }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(null); // エラーメッセージ用
+  const [error, setError] = useState(null);
 
   const handleSubmit = async (event) => {
-    event.preventDefault(); // フォームのデフォルト送信をキャンセル
-    setError(null); // エラーメッセージをリセット
+    event.preventDefault();
+    setError(null);
 
     if (!email || !password) {
       setError('メールアドレスとパスワードを入力してください。');
@@ -17,15 +16,21 @@ export default function LoginScreen({ onLoginSuccess, onBack }) {
     }
 
     try {
-      // FastAPIの/tokenエンドポイントに、フォーム形式でデータを送信
+      // ★★★ ここから修正 ★★★
+
+      // 1. 送信するデータ形式を「フォーム形式」に変更
+      const formData = new URLSearchParams();
+      formData.append('username', email);
+      formData.append('password', password);
+
       const response = await fetch('http://127.0.0.1:8000/token', {
         method: 'POST',
+        // 2. ヘッダーを「フォーム形式」であることを示すように変更
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          username: email,
-          password: password,
-        }),
+        body: formData,
       });
+      
+      // ★★★ ここまで修正 ★★★
 
       const data = await response.json();
 
@@ -33,7 +38,6 @@ export default function LoginScreen({ onLoginSuccess, onBack }) {
         throw new Error(data.detail || 'ログインに失敗しました。');
       }
       
-      // ログイン成功後、親コンポーネントにユーザー情報を渡す
       onLoginSuccess(data);
 
     } catch (err) {
@@ -43,7 +47,9 @@ export default function LoginScreen({ onLoginSuccess, onBack }) {
 
   return (
     <div style={{ padding: '20px', maxWidth: '400px', margin: '40px auto' }}>
-      <button onClick={onBack} style={{ marginBottom: '20px' }}>&larr; 戻る</button>
+      <button onClick={onBack} style={{ marginBottom: '20px', background: 'none', border: 'none', cursor: 'pointer', color: '#007bff' }}>
+        &larr; 戻る
+      </button>
       
       <h1 style={{ textAlign: 'center' }}>ログイン</h1>
       

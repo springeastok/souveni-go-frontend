@@ -1,80 +1,83 @@
 'use client';
 import React, { useState } from 'react';
 
-// --- 画面コンポーネントのインポート（後で作成） ---
+// --- 各画面のコンポーネントをインポート ---
 import WelcomeScreen from '../components/WelcomeScreen';
 import LoginScreen from '../components/LoginScreen';
 import RegisterScreen from '../components/RegisterScreen';
+import ProfileSetupScreen from '../components/ProfileSetupScreen';
 import PreferenceSelector from '../components/PreferenceSelector';
-import { getOrCreateGuestId } from '../utils/guestId'; // ゲストID取得関数
+import RecommendationScreen from '../components/RecommendationScreen'; // ★★★ RecommendationScreenをインポート ★★★
+import { getOrCreateGuestId } from '../utils/guestId';
 
 // 画面の状態を管理するための定数
 const STAGES = {
   WELCOME: 'welcome',
   LOGIN: 'login',
   REGISTER: 'register',
+  PROFILE_SETUP: 'profile_setup',
   PREFERENCE_SELECTION: 'preference_selection',
+  MAIN_APP: 'main_app', // メインの推薦画面
 };
 
 export default function Home() {
   const [stage, setStage] = useState(STAGES.WELCOME);
-  const [currentUserId, setCurrentUserId] = useState(null); // ログイン/登録後のユーザーID
+  const [currentId, setCurrentId] = useState(null); // ユーザーID or ゲストID
 
   // --- ナビゲーション関数 ---
-  const goToLogin = () => setStage(STAGES.LOGIN);
-  const goToRegister = () => setStage(STAGES.REGISTER);
   const goToWelcome = () => setStage(STAGES.WELCOME);
-  
   const handleGuest = () => {
-    const guestId = getOrCreateGuestId();
-    setCurrentUserId(guestId); // ゲストIDをセット
-    setStage(STAGES.PREFERENCE_SELECTION);
+    setCurrentId(getOrCreateGuestId());
+    setStage(STAGES.PROFILE_SETUP);
   };
   
-  // --- 登録完了後の処理 ---
-  const onRegisterComplete = (userId) => {
-    setCurrentUserId(userId);
-    setStage(STAGES.PREFERENCE_SELECTION);
+  // --- イベントハンドラ ---
+  const onRegisterSuccess = (userId) => {
+    setCurrentId(userId);
+    setStage(STAGES.PROFILE_SETUP);
   };
   
-  // --- ログイン完了後の処理 ---
-  const onLoginComplete = (userData) => {
+  const onProfileComplete = (finalUserId) => {
+    setCurrentId(finalUserId);
+    setStage(STAGES.PREFERENCE_SELECTION);
+  };
+
+  const onLoginSuccess = (userData) => {
     alert(`ようこそ、 ${userData.email} さん！`);
-    // メインコンテンツページなどに遷移
-    // router.push('/dashboard');
+    setCurrentId(userData.user_id);
+    setStage(STAGES.MAIN_APP); // ログイン成功後、メイン画面へ
   };
   
-  // --- 好み選択完了後の処理 ---
   const onPreferenceComplete = () => {
-    alert("好み設定が完了しました！");
-    // メインコンテンツページなどに遷移
-    // router.push('/dashboard');
+    alert("初期設定が完了しました！");
+    setStage(STAGES.MAIN_APP); // 好み設定完了後、メイン画面へ
   };
 
-  return (
-    <div>
-      {stage === STAGES.WELCOME && (
-        <WelcomeScreen
-          onLoginClick={goToLogin}
-          onRegisterClick={goToRegister}
-          onGuestClick={handleGuest}
-        />
-      )}
-
-      {stage === STAGES.LOGIN && (
-        <LoginScreen onLoginSuccess={onLoginComplete} onBack={goToWelcome} />
-      )}
+  // --- 表示するコンポーネントを切り替える ---
+  const renderStage = () => {
+    switch (stage) {
+      case STAGES.LOGIN:
+        return <LoginScreen onLoginSuccess={onLoginSuccess} onBack={goToWelcome} />;
+      case STAGES.REGISTER:
+        return <RegisterScreen onRegisterSuccess={onRegisterSuccess} onBack={goToWelcome} />;
+      case STAGES.PROFILE_SETUP:
+        return <ProfileSetupScreen userId={currentId} onProfileComplete={onProfileComplete} onBack={goToWelcome} />;
+      case STAGES.PREFERENCE_SELECTION:
+        return <PreferenceSelector userId={currentId} onComplete={onPreferenceComplete} />;
       
-      {stage === STAGES.REGISTER && (
-        <RegisterScreen onRegisterSuccess={onRegisterComplete} onBack={goToWelcome} />
-      )}
+      // ★★★ ここの表示をRecommendationScreenに変更 ★★★
+      case STAGES.MAIN_APP:
+        return <RecommendationScreen userId={currentId} />;
+      
+      case STAGES.WELCOME:
+      default:
+        return <WelcomeScreen 
+                  onLoginClick={() => setStage(STAGES.LOGIN)} 
+                  onRegisterClick={() => setStage(STAGES.REGISTER)} 
+                  onGuestClick={handleGuest} 
+                />;
+    }
+  };
 
-      {stage === STAGES.PREFERENCE_SELECTION && (
-        <PreferenceSelector
-          userId={currentUserId}
-          onComplete={onPreferenceComplete}
-        />
-      )}
-    </div>
-  );
+  return <div>{renderStage()}</div>;
 }
