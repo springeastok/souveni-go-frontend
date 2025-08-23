@@ -47,7 +47,7 @@ export default function ProfileSetupScreen({ userId, onProfileComplete, onBack }
         <div className="bg-white p-8 rounded-2xl shadow-md">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-800">あなたのことを教えてください</h1>
-            <p className="text-gray-600 mt-2">よりあなたに合ったお土産を提案するために利用します。</p>
+            <p className="text-gray-600 mt-2">あなたに合ったお土産を提案するために利用します。</p>
           </div>
           
           <div className="space-y-8">
