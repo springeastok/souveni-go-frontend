@@ -1,9 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 
-// ★★★ 1. 配列をシャッフルするためのヘルパー関数を追加 ★★★
 function shuffleArray(array) {
-  // Fisher-Yates (Knuth) Shuffle アルゴリズム
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
@@ -17,6 +15,7 @@ export default function PreferenceSelector({ userId, onComplete }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // ★★★ 変更点1: useEffectからデータ取得ロジックを外に出して、再利用可能にする ★★★
   const fetchItems = async () => {
     setIsLoading(true);
     setError(null);
@@ -24,12 +23,8 @@ export default function PreferenceSelector({ userId, onComplete }) {
       const response = await fetch('http://127.0.0.1:8000/preferences/selection');
       if (!response.ok) throw new Error('Failed to fetch items');
       const data = await response.json();
-      
-      // ★★★ 2. 取得したデータを結合し、シャッフルしてからstateに保存 ★★★
       const combinedItems = [...data.suppliers, ...data.products];
-      const shuffledItems = shuffleArray(combinedItems);
-      setItems(shuffledItems);
-
+      setItems(shuffleArray(combinedItems));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -37,10 +32,36 @@ export default function PreferenceSelector({ userId, onComplete }) {
     }
   };
 
-  useEffect(() => { fetchItems(); }, []);
-  const handleReshuffle = () => { setSelectedIds(new Set()); fetchItems(); };
-  const handleSelect = (id) => { setSelectedIds(prev => { const newSelection = new Set(prev); if (newSelection.has(id)) { newSelection.delete(id); } else { if (newSelection.size >= 3) return prev; newSelection.add(id); } return newSelection; }); };
+  // 画面の初回読み込み時に一度だけアイテムを取得する
+  useEffect(() => {
+    fetchItems();
+  }, []);
+  
+  const handleSelect = (id) => {
+    setSelectedIds(prev => {
+      const newSelection = new Set(prev);
+      if (newSelection.has(id)) {
+        newSelection.delete(id);
+      } else {
+        if (newSelection.size < 3) {
+          newSelection.add(id);
+        }
+      }
+      return newSelection;
+    });
+  };
+
+  // ★★★ 変更点2: 新しい「入れ替え」ボタン用の関数を作成 ★★★
+  const handleReshuffle = () => {
+    // 現在の選択をリセット
+    setSelectedIds(new Set());
+    // アイテムを再取得
+    fetchItems();
+  };
+
   const handleSubmit = async () => {
+    console.log('handleSubmit関数が呼び出されました！'); 
+
     try {
       const response = await fetch('http://127.0.0.1:8000/users/preferences', {
         method: 'POST',
@@ -51,82 +72,77 @@ export default function PreferenceSelector({ userId, onComplete }) {
           selected_ids: Array.from(selectedIds),
         }),
       });
+
       if (!response.ok) {
         const errData = await response.json();
         throw new Error(errData.detail || 'Failed to save preferences');
       }
+      
       alert('好みの設定が完了しました！');
       onComplete();
+
     } catch (err) {
+      console.error('送信中にエラーが発生しました:', err);
       setError(err.message);
     }
   };
 
-  if (isLoading) return <p>好み分析用のアイテム情報を集めています...</p>;
-  if (error) return <p>エラーが発生しました: {error}</p>;
+  if (isLoading) return <div className="text-center p-8">好み分析用のアイテム情報を集めています...</div>;
+  if (error) return <div className="text-center p-8 text-red-500">エラーが発生しました: {error}</div>;
 
   const selectionCount = selectedIds.size;
-  const isButtonEnabled = selectionCount >= 1 && selectionCount <= 3;
-  const isSelectionMaxed = selectionCount === 3;
 
   return (
-    <div style={{ padding: '1rem' }}>
-      <h2>あなたの好みに近いもの、気になるものを1〜3つ選んでください</h2>
-      
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+    <div className="min-h-screen bg-[#FDF8E8] p-4 flex flex-col">
+      <div className="w-full">
+        <img src="/souvenigo_logo.png" alt="SouveniGo Logo" className="h-8" />
+      </div>
+
+      <div className="text-center py-4">
+        <h2 className="text-xl font-semibold text-gray-800">
+          あなたの好みに近いもの、気になるものを1〜3つ選んでください
+        </h2>
+      </div>
+
+      <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-4 align-content-start">
         {items.map(item => {
           const isSelected = selectedIds.has(item.id);
+          const isSelectionMaxed = selectionCount === 3;
           const isDisabled = isSelectionMaxed && !isSelected;
 
           return (
-            // 横長の選択肢ボックス
             <div
               key={item.id}
               onClick={() => !isDisabled && handleSelect(item.id)}
-              style={{
-                display: 'flex', // 画像とテキストを横並びにする
-                alignItems: 'center', // 垂直方向中央揃え
-                padding: '1rem',
-                border: isSelected ? '2px solid #007bff' : '2px solid #ccc',
-                borderRadius: '6px',
-                cursor: isDisabled ? 'not-allowed' : 'pointer',
-                opacity: isDisabled ? 0.5 : 1,
-                transition: 'all 0.2s',
-                backgroundColor: isSelected ? '#f0f8ff' : 'white',
-              }}
+              className={`bg-white rounded-lg shadow p-3 flex flex-col items-center justify-start text-center border-2 transition-all duration-200 aspect-[5/6] ${isSelected ? 'border-blue-500 shadow-md' : 'border-transparent'} ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}`}
             >
-              {/* ★★★ 2. 画像エリア (左50%) ★★★ */}
-              <div style={{ width: '50%', paddingRight: '1rem' }}>
-                <img 
-                  src={item.image_url || 'https://via.placeholder.com/150'} // 画像がない場合の代替画像
-                  alt={item.name}
-                  style={{
-                    width: '100%',
-                    height: 'auto',
-                    aspectRatio: '1 / 1', // 画像を正方形に保つ
-                    objectFit: 'cover', // 画像をコンテナに合わせてトリミング
-                    borderRadius: '4px',
-                  }}
-                />
-              </div>
-
-              {/* ★★★ 3. テキストエリア (右50%) ★★★ */}
-              <div style={{ width: '50%', textAlign: 'left' }}>
-                <p style={{ fontWeight: 'bold', fontSize: '1.1rem', margin: '0 0 0.5rem 0' }}>{item.name}</p>
-                <p style={{ fontSize: '0.9rem', color: '#555', margin: 0 }}>{item.description}</p>
+              <img src={item.image_url || 'https://via.placeholder.com/150'} alt={item.name} className="w-full aspect-square object-cover rounded-md mb-3" />
+              <div className="w-full">
+                <p className="font-bold text-blue-800 text-base leading-tight w-full truncate">{item.name}</p>
+                <p className="text-sm text-gray-500 mt-1 w-full truncate">{item.description}</p>
               </div>
             </div>
           );
         })}
       </div>
-      
-      {/* ボタン部分は変更なし */}
-      <button onClick={handleSubmit} disabled={!isButtonEnabled} style={{ marginTop: '2rem', padding: '1rem 2rem', width: '100%', border: 'none', borderRadius: '8px', fontSize: '1.1rem', color: 'white', backgroundColor: isButtonEnabled ? '#007bff' : '#ccc', cursor: isButtonEnabled ? 'pointer' : 'not-allowed' }}>
-        {selectionCount === 0 ? '1つ以上選択してください' : `選択を完了する (${selectionCount}個)`}
-      </button>
-      <button onClick={handleReshuffle} style={{ marginTop: '1rem', padding: '0.75rem 2rem', width: '100%', border: '1px solid #ccc', borderRadius: '8px', fontSize: '1rem', color: '#333', backgroundColor: '#f0f0f0', cursor: 'pointer' }}>
-        選択肢を変更する
-      </button>
+
+      <div className="py-4">
+        <button
+          onClick={handleSubmit}
+          disabled={selectionCount === 0}
+          className="w-full bg-[#FBC943] text-gray-800 text-lg font-bold py-3 rounded-lg shadow-sm transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {selectionCount === 0 ? '1つ以上選択してください' : `${selectionCount}個 選択中`}
+        </button>
+
+        {/* ★★★ 変更点3: 「選択肢を入れ替える」ボタンを追加 ★★★ */}
+        <button
+          onClick={handleReshuffle}
+          className="w-full mt-3 bg-white text-gray-700 text-base font-semibold py-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors"
+        >
+          選択肢を入れ替える
+        </button>
+      </div>
     </div>
   );
 }

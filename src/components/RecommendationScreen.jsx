@@ -1,5 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
+import MapComponent from './MapComponent';
+import RecommendationCard from './RecommendationCard';
 
 const MOCK_LOCATIONS = [
   { name: '広島駅', lat: 34.3973, lng: 132.4754 },
@@ -7,33 +9,28 @@ const MOCK_LOCATIONS = [
   { name: '原爆ドーム', lat: 34.3956, lng: 132.4536 },
   { name: '広島城', lat: 34.3992, lng: 132.4596 },
   { name: 'マツダスタジアム', lat: 34.3916, lng: 132.4845 },
+  { name: '平和記念公園', lat: 34.3955, lng: 132.4533 },
+  { name: '宮島', lat: 34.2966, lng: 132.3198 }
 ];
 
 export default function RecommendationScreen({ userId }) {
   const [recommendations, setRecommendations] = useState([]);
-  const [currentLocationName, setCurrentLocationName] = useState('');
+  const [currentLocation, setCurrentLocation] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [dialogItem, setDialogItem] = useState(null);
+  const [isMapFullScreen, setIsMapFullScreen] = useState(false);
+  const [selectedPinId, setSelectedPinId] = useState(null);
 
   useEffect(() => {
-    if (!userId) {
-      setIsLoading(false);
-      setError("ユーザーIDが指定されていません。");
-      return;
-    }
     const fetchRecommendations = async () => {
       setIsLoading(true);
       setError(null);
       const randomLocation = MOCK_LOCATIONS[Math.floor(Math.random() * MOCK_LOCATIONS.length)];
-      setCurrentLocationName(randomLocation.name);
+      setCurrentLocation(randomLocation);
       try {
         const url = `http://127.0.0.1:8000/recommendations?user_id=${userId}&latitude=${randomLocation.lat}&longitude=${randomLocation.lng}`;
         const response = await fetch(url);
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.detail || 'Failed to fetch recommendations');
-        }
+        if (!response.ok) throw new Error('Failed to fetch');
         const data = await response.json();
         setRecommendations(data.items);
       } catch (err) {
@@ -45,74 +42,89 @@ export default function RecommendationScreen({ userId }) {
     fetchRecommendations();
   }, [userId]);
 
-  const handleFavorite = async (item) => { try { await fetch('http://127.0.0.1:8000/favorites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId, item_id: item.id }), }); alert(`${item.name} を「後で見る」に保存しました。`); } catch (err) { alert('保存に失敗しました。'); } finally { setDialogItem(null); } };
-  const handleGoToMap = async (item) => { try { await fetch('http://127.0.0.1:8000/destinated', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId, item_id: item.id }), }); } catch (err) { console.error('保存に失敗しました:', err); } const url = `https://www.google.com/maps/search/?api=1&query=${item.location.lat},${item.location.lng}`; window.open(url, '_blank'); setDialogItem(null); };
+  const handleFavorite = async (item) => {
+    try {
+      const response = await fetch('http://127.0.0.1:8000/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, item_id: item.id }),
+      });
+      if (!response.ok) throw new Error('Save to favorites failed');
+      alert('後で見るリストに登録しました');
+    } catch (err) {
+      console.error(err);
+      alert('登録に失敗しました。');
+    }
+  };
+
+  const handleGoToMap = async (item) => {
+    try {
+      await fetch('http://127.0.0.1:8000/destinated', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, item_id: item.id }),
+      });
+    } catch (err) {
+      console.error('Destinatedの保存に失敗しました:', err);
+    }
+    const url = `https://www.google.com/maps?q=${item.location.lat},${item.location.lng}`;
+    window.open(url, '_blank');
+  };
   
-  if (isLoading) return <p>あなたへのおすすめを分析中...</p>;
-  if (error) return <p>エラー: {error}</p>;
+  const handleDismissItem = (itemId) => {
+    setRecommendations(prev => prev.filter(item => item.id !== itemId));
+  };
+  
+  const handlePinClick = (item) => {
+    setSelectedPinId(item.id);
+    setIsMapFullScreen(false);
+  };
+  const handleToggleMapView = () => {
+    setIsMapFullScreen(prev => !prev);
+    if (isMapFullScreen) setSelectedPinId(null);
+  };
+
+  const displayedItems = selectedPinId 
+    ? recommendations.filter(item => item.id === selectedPinId) 
+    : recommendations;
+
+  if (isLoading) return <div className="h-screen flex justify-center items-center"><p>分析中...</p></div>;
+  if (error) return <div className="h-screen flex justify-center items-center"><p>エラー: {error}</p></div>;
 
   return (
-    <div style={{ padding: '1rem' }}>
-      <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f0f0f0', borderRadius: '8px' }}>
-        <p style={{ margin: 0 }}>現在地 (ダミー): <strong>{currentLocationName}</strong></p>
-        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', color: '#555' }}>
-          周辺10km以内で、あなたの好みに合う場所（マッチ度40%以上）を表示しています。
-        </p>
+    <div className="h-screen w-screen flex flex-col bg-gray-50 relative">
+      <div className={`w-full transition-all duration-300 ${isMapFullScreen ? 'h-full' : 'h-1/2'}`}>
+        <MapComponent userLocation={currentLocation} items={recommendations} onPinClick={handlePinClick} onGoToMap={handleGoToMap} />
       </div>
 
-      {/* ### スタイル調整 ### */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {recommendations.length > 0 ? (
-          recommendations.map(item => (
-            <div 
-              key={item.id} 
-              onClick={() => setDialogItem(item)} 
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                padding: '1rem', 
-                border: '2px solid #ccc',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                backgroundColor: 'white',
-              }}
-            >
-              {/* 画像エリア */}
-              <div style={{ width: '50%', paddingRight: '1rem' }}>
-                <img src={item.image_url || 'https://via.placeholder.com/150'} alt={item.name} style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: '4px' }} />
-              </div>
-
-              {/* テキストエリア */}
-              <div style={{ width: '50%', textAlign: 'left' }}>
-                <p style={{ fontWeight: 'bold', fontSize: '1.1rem', margin: '0 0 0.5rem 0' }}>{item.name}</p>
-                <p style={{ fontSize: '0.9rem', color: '#555', margin: '0 0 0.5rem 0' }}>{item.description}</p>
-                <div style={{ fontSize: '0.9rem', color: '#333' }}>
-                  <span>マッチ度: <strong style={{ color: '#007bff' }}>{item.match_score}%</strong></span>
-                  <span style={{ marginLeft: '1rem' }}>距離: <strong>{item.distance_km} km</strong></span>
-                </div>
-              </div>
+      {!isMapFullScreen && (
+        <>
+          <div className="h-1/2 p-4 flex flex-col overflow-y-auto">
+            <div className="mb-4 p-3 bg-white rounded-lg shadow-sm border border-gray-200">
+              <p className="text-sm text-gray-700">現在地 (ダミー): <strong className="font-semibold text-gray-900">{currentLocation?.name}</strong></p>
             </div>
-          ))
-        ) : (
-          <div style={{ textAlign: 'center', padding: '2rem', border: '1px dashed #ccc', borderRadius: '8px' }}>
-            <p>条件に合うおすすめが見つかりませんでした。</p>
-            <p style={{ fontSize: '0.9rem', color: '#555' }}>好みを再設定するか、別の場所でお試しください。</p>
-          </div>
-        )}
-      </div>
-
-      {dialogItem && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', textAlign: 'center' }}>
-            <h2>「{dialogItem.name}」</h2>
-            <p>見に行きたいですか？</p>
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-              <button onClick={() => handleGoToMap(dialogItem)} style={{ padding: '0.5rem 1rem' }}>行きたい！</button>
-              <button onClick={() => handleFavorite(dialogItem)} style={{ padding: '0.5rem 1rem' }}>後で見たい</button>
-              <button onClick={() => setDialogItem(null)} style={{ padding: '0.5rem 1rem' }}>行かない</button>
+            <div className="flex flex-col gap-4">
+              {displayedItems.map(item => (
+                <RecommendationCard 
+                  key={item.id}
+                  item={item}
+                  // ★★★ ここで指示（props）を渡す ★★★
+                  onFavorite={handleFavorite}
+                  onGoToMap={handleGoToMap}
+                  onDismiss={handleDismissItem}
+                />
+              ))}
             </div>
           </div>
-        </div>
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
+            <button onClick={handleToggleMapView} className="bg-yellow-400 text-gray-800 font-bold py-3 px-8 rounded-full shadow-lg">地図を大きく見る</button>
+          </div>
+        </>
+      )}
+      {isMapFullScreen && (
+         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
+            <button onClick={handleToggleMapView} className="bg-yellow-400 text-gray-800 font-bold py-3 px-8 rounded-full shadow-lg">リストを見る</button>
+          </div>
       )}
     </div>
   );
