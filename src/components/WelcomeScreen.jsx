@@ -13,7 +13,7 @@ export default function WelcomeScreen({ onLoginSuccess, onRegisterSuccess, onGue
       const formData = new URLSearchParams();
       formData.append('username', email);
       formData.append('password', password);
-      const response = await fetch('http://127.0.0.1:8000/token', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: formData,
@@ -32,7 +32,7 @@ export default function WelcomeScreen({ onLoginSuccess, onRegisterSuccess, onGue
   const handleRegister = async () => {
     // ... (中身は変更なし)
     try {
-      const response = await fetch('http://127.0.0.1:8000/users/register', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

@@ -20,7 +20,7 @@ export default function PreferenceSelector({ userId, onComplete }) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://127.0.0.1:8000/preferences/selection');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/preferences/selection`);
       if (!response.ok) throw new Error('Failed to fetch items');
       const data = await response.json();
       const combinedItems = [...data.suppliers, ...data.products];
@@ -63,7 +63,7 @@ export default function PreferenceSelector({ userId, onComplete }) {
     console.log('handleSubmit関数が呼び出されました！'); 
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/users/preferences', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/preferences`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

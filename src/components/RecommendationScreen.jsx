@@ -28,7 +28,7 @@ export default function RecommendationScreen({ userId }) {
       const randomLocation = MOCK_LOCATIONS[Math.floor(Math.random() * MOCK_LOCATIONS.length)];
       setCurrentLocation(randomLocation);
       try {
-        const url = `http://127.0.0.1:8000/recommendations?user_id=${userId}&latitude=${randomLocation.lat}&longitude=${randomLocation.lng}`;
+        const url = `${process.env.NEXT_PUBLIC_API_URL}/recommendations?user_id=${userId}&latitude=${randomLocation.lat}&longitude=${randomLocation.lng}`;
         const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch');
         const data = await response.json();
@@ -44,7 +44,7 @@ export default function RecommendationScreen({ userId }) {
 
   const handleFavorite = async (item) => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/favorites', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/favorites`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId, item_id: item.id }),
@@ -59,7 +59,7 @@ export default function RecommendationScreen({ userId }) {
 
   const handleGoToMap = async (item) => {
     try {
-      await fetch('http://127.0.0.1:8000/destinated', {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/destinated`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId, item_id: item.id }),
