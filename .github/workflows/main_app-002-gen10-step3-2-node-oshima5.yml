@@ -18,8 +18,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js version
-        uses: actions/setup-node@v3
+      - name: List files
+        run: ls -la && echo "---" && ls -la souveni-go-frontend
         with:
           node-version: '22.x'
 
@@ -64,8 +64,9 @@ jobs:
         with:
           app-name: 'app-002-gen10-step3-2-node-oshima5'
           slot-name: 'Production'
-          package: ./deploy
+          package: ./souveni-go-frontend
 
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_C897C702D44E43A99D3C89A2CAF2DBE5 }}
+
 
 
