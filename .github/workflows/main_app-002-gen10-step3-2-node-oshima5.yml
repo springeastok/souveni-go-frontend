@@ -33,8 +33,8 @@ jobs:
       - name: Copy artifact for deployment job
         run: |
           mkdir deploy
-          cp -r ./souveni-go/standalone/. ./deploy
-          cp -r ./souveni-go/static ./deploy/souveni-go/static
+          cp -r ./.next/standalone/. ./deploy
+          cp -r ./.next/static ./deploy/.next/static
       
       - name: Zip artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -67,4 +67,5 @@ jobs:
           package: ./deploy
 
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_C897C702D44E43A99D3C89A2CAF2DBE5 }}
+
 
