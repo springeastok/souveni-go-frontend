@@ -15,6 +15,11 @@ export default function ProfileSetupScreen({ userId, onProfileComplete, onBack }
       gender: gender,
     };
 
+  // デバッグログを追加
+    console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
+    console.log('Full URL:', `${process.env.NEXT_PUBLIC_API_URL}/users/profile`);
+    console.log('Payload:', payload);
+    
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/profile`, {
         method: 'POST',
