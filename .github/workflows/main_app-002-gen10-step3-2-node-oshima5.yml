@@ -18,6 +18,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Show folders
+        run: |
+          ls -la
+          echo "---"
+          ls -la souveni-go-frontend || true
+          echo "--- app dir check ---"
+          test -d souveni-go-frontend/app && echo "found app/"
+          test -d souveni-go-frontend/src/app && echo "found src/app"
+          
       - name: List files
         run: ls -la && echo "---" && ls -la souveni-go-frontend
         with:
@@ -67,6 +76,7 @@ jobs:
           package: ./souveni-go-frontend
 
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_C897C702D44E43A99D3C89A2CAF2DBE5 }}
+
 
 
 
