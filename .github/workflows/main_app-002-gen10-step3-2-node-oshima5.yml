@@ -9,10 +9,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # リポジトリをチェックアウト
       - uses: actions/checkout@v4
 
-      # デバッグ: ディレクトリ構造を出力（初回だけ確認用）
+      # （初回デバッグ用・不要なら削除OK）
       - name: Show project layout
         run: |
           ls -la
@@ -22,10 +21,8 @@ jobs:
           test -d souveni-go-frontend/app && echo "found app/"
           test -d souveni-go-frontend/src/app && echo "found src/app" || true
 
-      # Azure App Service にデプロイ
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: app-002-gen10-step3-2-node-oshima5  # あなたのApp Service名
-          package: ./souveni-go-frontend                # Next.jsのpackage.jsonがあるフォルダを指定
-  
+          app-name: app-002-gen10-step3-2-node-oshima5
+          package: ./souveni-go-frontend
