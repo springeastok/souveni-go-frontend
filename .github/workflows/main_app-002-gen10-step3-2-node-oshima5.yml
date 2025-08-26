@@ -18,7 +18,8 @@ jobs:
         
       - name: npm install, build, and test
         env:
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_ENDPOINT }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_ENDPOINT }}          
+          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
         run: |
           npm install
           npm run build --if-present
@@ -63,3 +64,4 @@ jobs:
           slot-name: 'Production'
           package: ./deploy
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_C897C702D44E43A99D3C89A2CAF2DBE5 }}
+
